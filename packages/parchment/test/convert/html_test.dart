@@ -538,6 +538,229 @@ void main() {
             '<div class="checklist-item"><input type="checkbox" disabled><label>&nbsp;Check - 2</label></div></div>'
             '<p>Paragraph</p>');
       });
+
+      test('Checklist followed by one line quote, followed by checklist', () {
+        // Quote must be more than 1 line.
+        // Bug: Syntactically incorrect HTML
+        final doc = ParchmentDocument.fromJson([
+          {'insert': 'tasklist1'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'cl'}
+          },
+          // This quote and following "tasklist2" on checklist is messed up.
+          {'insert': 'quote'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'quote'}
+          },
+          {'insert': 'tasklist2'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'cl'}
+          },
+        ]);
+
+        expect(
+            codec.encode(doc.toDelta()),
+            '<div class="checklist">'
+            '<div class="checklist-item"><input type="checkbox" disabled><label>&nbsp;tasklist1</label></div>'
+            '</div>'
+            '<blockquote style="margin: 0 0 0 0.8ex; border-left: 1px solid rgb(204, 204, 204); padding-left: 1ex;">quote</blockquote>'
+            '<div class="checklist">'
+            '<div class="checklist-item"><input type="checkbox" disabled><label>&nbsp;tasklist2</label></div>'
+            '</div>');
+      });
+
+      test('Code block followed by two line quote', () {
+        // Bug: Syntactically incorrect HTML
+        final doc = ParchmentDocument.fromJson([
+          {'insert': 'codeblock'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'code'}
+          },
+          {'insert': 'line1'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'quote'}
+          },
+          {'insert': 'line2'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'quote'}
+          }
+        ]);
+
+        expect(
+            codec.encode(doc.toDelta()),
+            '<pre><code>codeblock\n'
+            '</code></pre>'
+            '<blockquote style="margin: 0 0 0 0.8ex; border-left: 1px solid rgb(204, 204, 204); padding-left: 1ex;">line1</blockquote>'
+            '<blockquote style="margin: 0 0 0 0.8ex; border-left: 1px solid rgb(204, 204, 204); padding-left: 1ex;">line2</blockquote>');
+      });
+
+      test('Checklist followed by two line quote', () {
+        // Bug: Syntactically incorrect HTML
+        final doc = ParchmentDocument.fromJson([
+          {'insert': 'task'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'cl'}
+          },
+          {'insert': 'line1'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'quote'}
+          },
+          {'insert': 'line2'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'quote'}
+          }
+        ]);
+
+        expect(
+            codec.encode(doc.toDelta()),
+            '<div class="checklist">'
+            '<div class="checklist-item"><input type="checkbox" disabled><label>&nbsp;task</label></div>'
+            '</div>'
+            '<blockquote style="margin: 0 0 0 0.8ex; border-left: 1px solid rgb(204, 204, 204); padding-left: 1ex;">line1</blockquote>'
+            '<blockquote style="margin: 0 0 0 0.8ex; border-left: 1px solid rgb(204, 204, 204); padding-left: 1ex;">line2</blockquote>');
+      });
+
+      test('List followed by two line quote', () {
+        // Bug: Syntactically incorrect HTML
+        final doc = ParchmentDocument.fromJson([
+          {'insert': 'list'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'ul'}
+          },
+          {'insert': 'line1'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'quote'}
+          },
+          {'insert': 'line2'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'quote'}
+          },
+        ]);
+
+        expect(
+            codec.encode(doc.toDelta()),
+            '<ul>'
+            '<li>list</li>'
+            '</ul>'
+            '<blockquote style="margin: 0 0 0 0.8ex; border-left: 1px solid rgb(204, 204, 204); padding-left: 1ex;">line1</blockquote>'
+            '<blockquote style="margin: 0 0 0 0.8ex; border-left: 1px solid rgb(204, 204, 204); padding-left: 1ex;">line2</blockquote>');
+      });
+
+      test('Multi-level list followed by multi-line quote followed by list',
+          () {
+        // Bug: Quote HTML is messed up and second list is indented to second level.
+        final doc = ParchmentDocument.fromJson([
+          {'insert': 'l1'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'ol'}
+          },
+          {'insert': 'l1.2'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'ol', 'indent': 1}
+          },
+          {'insert': 'q1'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'quote'}
+          },
+          {'insert': 'q1'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'quote'}
+          },
+          {'insert': 'r'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'ol'}
+          }
+        ]);
+
+        // TODO FAILURE
+        expect(codec.encode(doc.toDelta()), 'BROKEN');
+      });
+
+      test('Checklist, numbered list, bullet list in sequence', () {
+        // Bug: It seems to matter that the checklist comes first. HTML is incorrect.
+        final doc = ParchmentDocument.fromJson([
+          {'insert': 'checklist'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'cl'}
+          },
+          {'insert': 'numlist'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'ol'}
+          },
+          {'insert': 'bulletlist'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'ul'}
+          }
+        ]);
+
+        expect(codec.encode(doc.toDelta()), 'BROKEN');
+      });
+
+      test('Bullet list, checklist, numbered list in sequence', () {
+        // Bug: checklist must be the second list - generates exception in _writeTag.
+        final doc = ParchmentDocument.fromJson([
+          {'insert': 'bulletlist'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'ul'}
+          },
+          {'insert': 'checklist'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'cl'}
+          },
+          {'insert': 'numlist'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'ol'}
+          }
+        ]);
+
+        expect(codec.encode(doc.toDelta()), 'BROKEN');
+      });
+
+      test('Bullet list, checklist, quote in sequence', () {
+        // Bug: exception in _writeTag
+        final doc = ParchmentDocument.fromJson([
+          {'insert': 'bulletlist'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'ul'}
+          },
+          {'insert': 'checklist'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'cl'}
+          },
+          {'insert': 'quote'},
+          {
+            'insert': '\n',
+            'attributes': {'block': 'quote'}
+          }
+        ]);
+
+        expect(codec.encode(doc.toDelta()), 'BROKEN');
+      });
     });
 
     group('Links', () {

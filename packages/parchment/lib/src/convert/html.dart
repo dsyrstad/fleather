@@ -403,10 +403,12 @@ class _ParchmentHtmlEncoder extends Converter<Delta, String> {
     final currentBlockTag = openBlockTags.removeAt(0);
     _writeBlockTag(buffer, currentBlockTag);
     // adjust block tag opening with padding induced by previous block tags
-    newBlockTag = newBlockTag.withPadding(currentBlockTag.inducedPadding);
-    newBlockTag.closingPosition = buffer.length;
+    newBlockTag = _HtmlBlockTag(opStyle, buffer.length, buffer.length);
+//    newBlockTag = newBlockTag.withPadding(currentBlockTag.inducedPadding);
+//     newBlockTag.closingPosition = buffer.length;
     openBlockTags.insert(0, newBlockTag);
-    return newBlockTag.inducedPadding;
+//    return newBlockTag.inducedPadding;
+    return newBlockTag.openingPosition - state.nextLineStartPosition;
   }
 
   void _writeTag(StringBuffer buffer, _HtmlTag tag) {
